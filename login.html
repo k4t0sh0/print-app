@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>ログイン</title>
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <main class="container">
+      <section class="card">
+        <h1>🔐 ログイン</h1>
+
+        <p class="description">
+          学校プリント整理アプリにログインしてください。
+        </p>
+
+        <!-- メールアドレス -->
+        <label for="email">メールアドレス</label>
+
+        <input
+          type="email"
+          id="email"
+          placeholder="example@example.com"
+          autocomplete="email"
+        />
+
+        <!-- パスワード -->
+        <label for="password">パスワード</label>
+
+        <input
+          type="password"
+          id="password"
+          placeholder="パスワード"
+          autocomplete="current-password"
+        />
+
+        <!-- ログイン -->
+        <button id="loginButton">ログイン</button>
+
+        <!-- メッセージ -->
+        <p id="message" style="display: none"></p>
+      </section>
+    </main>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+
+      import {
+        getAuth,
+        signInWithEmailAndPassword,
+        onAuthStateChanged,
+      } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+
+      // =========================================================
+      // Firebase設定
+      // =========================================================
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyAha3w3vxJGMXYIv49aIn9V0no1zL604bA",
+
+        authDomain: "print-c744c.firebaseapp.com",
+
+        databaseURL: "https://print-c744c-default-rtdb.firebaseio.com/",
+
+        projectId: "print-c744c",
+
+        storageBucket: "print-c744c.firebasestorage.app",
+
+        messagingSenderId: "728050825677",
+
+        appId: "1:728050825677:web:e08101a72cb215f0f56c84",
+      };
+
+      // =========================================================
+      // Firebase初期化
+      // =========================================================
+
+      const app = initializeApp(firebaseConfig);
+
+      const auth = getAuth(app);
+
+      // =========================================================
+      // HTML
+      // =========================================================
+
+      const emailInput = document.getElementById("email");
+
+      const passwordInput = document.getElementById("password");
+
+      const loginButton = document.getElementById("loginButton");
+
+      const message = document.getElementById("message");
+
+      // =========================================================
+      // メッセージ表示
+      // =========================================================
+
+      function showMessage(text) {
+        message.textContent = text;
+
+        message.style.display = "block";
+      }
+
+      // =========================================================
+      // すでにログイン済みならindex.htmlへ
+      // =========================================================
+
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          console.log("すでにログインしています:", user.email);
+
+          location.href = "index.html";
+        }
+      });
+
+      // =========================================================
+      // ログイン
+      // =========================================================
+
+      loginButton.addEventListener("click", async () => {
+        const email = emailInput.value.trim();
+
+        const password = passwordInput.value;
+
+        if (!email || !password) {
+          showMessage("メールアドレスとパスワードを入力してください。");
+
+          return;
+        }
+
+        loginButton.disabled = true;
+
+        showMessage("ログインしています...");
+
+        try {
+          const result = await signInWithEmailAndPassword(
+            auth,
+            email,
+            password,
+          );
+
+          console.log("ログイン成功:", result.user.email);
+
+          location.href = "index.html";
+        } catch (error) {
+          console.error("ログインエラー:", error);
+
+          if (error.code === "auth/invalid-credential") {
+            showMessage("メールアドレスまたはパスワードが違います。");
+          } else if (error.code === "auth/invalid-email") {
+            showMessage("メールアドレスの形式が正しくありません。");
+          } else {
+            showMessage("ログインに失敗しました。");
+          }
+
+          loginButton.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

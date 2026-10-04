@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>プリント登録</title>
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <main class="container">
+      <h1>📄 プリント登録</h1>
+
+      <p class="description">QRコードにプリント情報を登録します。</p>
+
+      <!-- QR情報 -->
+      <section class="card">
+        <h2>QRコード</h2>
+
+        <p>QRコードID</p>
+
+        <div id="qrIdDisplay" class="result-id">読み込み中...</div>
+      </section>
+
+      <!-- プリント情報 -->
+      <section class="card">
+        <h2>プリント情報</h2>
+
+        <label for="title"> タイトル </label>
+
+        <input type="text" id="title" placeholder="例：二次関数" />
+
+        <label for="subject"> 科目 </label>
+
+        <select id="subject">
+          <option value="">科目を選択</option>
+
+          <option value="国語">国語</option>
+          <option value="数学">数学</option>
+          <option value="英語">英語</option>
+          <option value="理科">理科</option>
+          <option value="社会">社会</option>
+          <option value="音楽">音楽</option>
+          <option value="美術">美術</option>
+          <option value="保健体育">保健体育</option>
+          <option value="技術・家庭">技術・家庭</option>
+        </select>
+
+        <label for="unit"> 単元 </label>
+
+        <input type="text" id="unit" placeholder="例：二次関数" />
+
+        <label for="distributedDate"> 配布日 </label>
+
+        <input type="date" id="distributedDate" />
+
+        <label for="dueDate"> 提出期限 </label>
+
+        <input type="date" id="dueDate" />
+
+        <label for="memo"> メモ </label>
+
+        <textarea id="memo" rows="5" placeholder="メモを入力"></textarea>
+
+        <div class="video-section">
+          <label>動画</label>
+
+          <div id="videoList"></div>
+
+          <button type="button" id="addVideoButton">＋ 動画を追加</button>
+        </div>
+
+        <button type="button" id="saveButton">このQRに登録する</button>
+      </section>
+    </main>
+
+    <!-- Firebase -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+
+      import {
+        getFirestore,
+        collection,
+        query,
+        where,
+        getDocs,
+        addDoc,
+        serverTimestamp,
+      } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+      import {
+        getAuth,
+        onAuthStateChanged,
+      } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+
+      // =========================================================
+      // Firebase設定
+      // =========================================================
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyAha3w3vxJGMXYIv49aIn9V0no1zL604bA",
+
+        authDomain: "print-c744c.firebaseapp.com",
+
+        databaseURL: "https://print-c744c-default-rtdb.firebaseio.com/",
+
+        projectId: "print-c744c",
+
+        storageBucket: "print-c744c.firebasestorage.app",
+
+        messagingSenderId: "728050825677",
+
+        appId: "1:728050825677:web:e08101a72cb215f0f56c84",
+      };
+
+      // =========================================================
+      // Firebase初期化
+      // =========================================================
+
+      const app = initializeApp(firebaseConfig);
+
+      const db = getFirestore(app);
+
+      const auth = getAuth(app);
+
+      console.log("Firebase初期化完了");
+
+      // =========================================================
+      // QR ID取得
+      // =========================================================
+
+      const params = new URLSearchParams(location.search);
+
+      const qrId = params.get("qrId");
+
+      const qrIdDisplay = document.getElementById("qrIdDisplay");
+
+      if (!qrId) {
+        qrIdDisplay.textContent = "QRコードIDがありません";
+
+        document.getElementById("saveButton").disabled = true;
+
+        alert("QRコードからこの画面を開いてください。");
+      } else {
+        qrIdDisplay.textContent = qrId;
+      }
+
+      // =========================================================
+      // ログイン状態
+      // =========================================================
+
+      let currentUser = null;
+
+      onAuthStateChanged(auth, (user) => {
+        if (!user) {
+          location.href = "login.html";
+
+          return;
+        }
+
+        currentUser = user;
+
+        console.log("ログイン中:", user.email);
+      });
+
+      // =========================================================
+      // 保存
+      // =========================================================
+
+      const videoList = document.getElementById("videoList");
+
+      const addVideoButton = document.getElementById("addVideoButton");
+
+      function addVideoInput() {
+        const div = document.createElement("div");
+
+        div.className = "video-input";
+
+        div.innerHTML = `
+
+    <input
+      type="text"
+      class="video-title"
+      placeholder="動画タイトル"
+    />
+
+    <input
+      type="url"
+      class="video-url"
+      placeholder="https://..."
+    />
+
+    <button
+      type="button"
+      class="remove-video"
+    >
+      削除
+    </button>
+
+  `;
+
+        div.querySelector(".remove-video").addEventListener("click", () => {
+          div.remove();
+        });
+
+        videoList.appendChild(div);
+      }
+
+      addVideoButton.addEventListener("click", addVideoInput);
+
+      // 最初から1つ表示
+      addVideoInput();
+
+      document
+        .getElementById("saveButton")
+        .addEventListener("click", async () => {
+          if (!currentUser) {
+            alert("ログイン情報を確認できません。");
+
+            return;
+          }
+
+          if (!qrId) {
+            alert("QRコードIDがありません。");
+
+            return;
+          }
+
+          const title = document.getElementById("title").value.trim();
+
+          const subject = document.getElementById("subject").value;
+
+          const unit = document.getElementById("unit").value.trim();
+
+          const distributedDate =
+            document.getElementById("distributedDate").value;
+
+          const dueDate = document.getElementById("dueDate").value;
+
+          const memo = document.getElementById("memo").value.trim();
+
+          // =====================================================
+          // 入力チェック
+          // =====================================================
+
+          if (!title) {
+            alert("タイトルを入力してください。");
+
+            return;
+          }
+
+          if (!subject) {
+            alert("科目を選択してください。");
+
+            return;
+          }
+
+          const videoInputs = document.querySelectorAll(".video-input");
+
+          const videos = Array.from(videoInputs)
+            .map((element) => {
+              const title = element.querySelector(".video-title").value.trim();
+
+              const url = element.querySelector(".video-url").value.trim();
+
+              return {
+                title,
+                url,
+              };
+            })
+            .filter((video) => video.title || video.url);
+
+          // =====================================================
+          // 二重登録チェック
+          // =====================================================
+
+          try {
+            const printsRef = collection(db, "prints");
+
+            const q = query(printsRef, where("qrId", "==", qrId));
+
+            const existing = await getDocs(q);
+
+            if (!existing.empty) {
+              alert("このQRコードには、すでにプリントが登録されています。");
+
+              return;
+            }
+
+            // ===================================================
+            // Firestore保存
+            // ===================================================
+
+            const printData = {
+              qrId: qrId,
+
+              title: title,
+
+              subject: subject,
+
+              unit: unit,
+
+              distributedDate: distributedDate,
+
+              dueDate: dueDate,
+
+              memo: memo,
+
+              videos: videos,
+
+              userId: currentUser.uid,
+
+              createdAt: serverTimestamp(),
+
+              updatedAt: serverTimestamp(),
+            };
+
+            const docRef = await addDoc(printsRef, printData);
+
+            console.log("保存成功:", docRef.id);
+
+            alert("プリントを登録しました！");
+
+            // ===================================================
+            // reader.htmlへ戻る
+            // ===================================================
+
+            location.href = "reader.html";
+          } catch (error) {
+            console.error("Firestore保存エラー:", error);
+
+            alert("プリントの登録に失敗しました。\n" + error.message);
+          }
+        });
+    </script>
+  </body>
+</html>

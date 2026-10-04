@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>QR読み取り</title>
+
+    <link rel="stylesheet" href="style.css" />
+
+    <!-- QR読み取り -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+  </head>
+
+  <body>
+    <main class="container">
+      <h1>📷 QR読み取り</h1>
+
+      <p class="description">プリントのQRコードを読み取ってください。</p>
+
+      <!-- QRスキャナー -->
+      <section class="card">
+        <div id="reader"></div>
+      </section>
+
+      <!-- 読み取り結果 -->
+      <section class="card" id="resultCard" style="display: none">
+        <h2>読み取り結果</h2>
+
+        <p>プリントID</p>
+
+        <div class="result-id" id="resultId"></div>
+
+        <h3>プリント情報</h3>
+
+        <div id="printInfo"></div>
+      </section>
+    </main>
+
+    <!-- Firebase -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+
+      import {
+        getFirestore,
+        collection,
+        query,
+        where,
+        getDocs,
+      } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+      import {
+        getAuth,
+        onAuthStateChanged,
+        signOut,
+      } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+
+      // =========================================================
+      // Firebase設定
+      // =========================================================
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyAha3w3vxJGMXYIv49aIn9V0no1zL604bA",
+
+        authDomain: "print-c744c.firebaseapp.com",
+
+        databaseURL: "https://print-c744c-default-rtdb.firebaseio.com/",
+
+        projectId: "print-c744c",
+
+        storageBucket: "print-c744c.firebasestorage.app",
+
+        messagingSenderId: "728050825677",
+
+        appId: "1:728050825677:web:e08101a72cb215f0f56c84",
+      };
+
+      // =========================================================
+      // Firebase初期化
+      // =========================================================
+
+      const app = initializeApp(firebaseConfig);
+
+      const db = getFirestore(app);
+
+      const auth = getAuth(app);
+
+      console.log("Firebase初期化完了");
+
+      console.log("Firebase projectId:", firebaseConfig.projectId);
+
+      // =========================================================
+      // ログイン状態
+      // =========================================================
+
+      let currentUser = null;
+
+      onAuthStateChanged(auth, (user) => {
+        if (!user) {
+          console.log("未ログイン → login.html");
+
+          location.href = "login.html";
+
+          return;
+        }
+
+        currentUser = user;
+
+        console.log("ログイン中:", user.email);
+      });
+
+      // =========================================================
+      // QR読み取り成功
+      // =========================================================
+
+      let scanProcessing = false;
+
+      async function onScanSuccess(decodedText) {
+        // 連続読み取り防止
+        if (scanProcessing) {
+          return;
+        }
+
+        scanProcessing = true;
+
+        // QRコードの中身
+        const qrId = decodedText.trim();
+
+        console.log("QR読み取り:", qrId);
+
+        // =======================================================
+        // ログインチェック
+        // =======================================================
+
+        if (!currentUser) {
+          console.log("ログイン情報を確認できません。");
+
+          location.href = "login.html";
+
+          return;
+        }
+
+        // =======================================================
+        // 画面取得
+        // =======================================================
+
+        const resultCard = document.getElementById("resultCard");
+
+        const resultId = document.getElementById("resultId");
+
+        const printInfo = document.getElementById("printInfo");
+
+        // =======================================================
+        // 結果表示
+        // =======================================================
+
+        resultCard.style.display = "block";
+
+        resultId.textContent = qrId;
+
+        printInfo.innerHTML = `
+        <p>
+          Firestoreからプリント情報を取得しています...
+        </p>
+      `;
+
+        try {
+          // =====================================================
+          // Firestore
+          // qrIdフィールドを検索
+          // =====================================================
+
+          const printsRef = collection(db, "prints");
+
+          const q = query(printsRef, where("qrId", "==", qrId));
+
+          const querySnapshot = await getDocs(q);
+
+          // =====================================================
+          // プリントが存在しない
+          // =====================================================
+
+          if (querySnapshot.empty) {
+            console.log("このQRコードに紐づいたプリントがありません");
+
+            printInfo.innerHTML = `
+
+            <div class="qr-not-found">
+
+              <p>
+                このQRコードはまだプリントに登録されていません。
+              </p>
+
+              <p>
+                QRコードID：
+                <strong>
+                  ${escapeHtml(qrId)}
+                </strong>
+              </p>
+
+              <button
+                type="button"
+                id="registerPrintButton"
+              >
+                このQRにプリントを登録
+              </button>
+
+            </div>
+
+          `;
+
+            // 登録ボタン
+            document
+              .getElementById("registerPrintButton")
+              .addEventListener("click", () => {
+                location.href = `add-print.html?qrId=${encodeURIComponent(qrId)}`;
+              });
+
+            // QRスキャナー停止
+            try {
+              await scanner.clear();
+            } catch (error) {
+              console.log("scanner停止:", error);
+            }
+
+            return;
+          }
+
+          // =====================================================
+          // プリント取得
+          // =====================================================
+
+          const printDoc = querySnapshot.docs[0];
+
+          const data = printDoc.data();
+
+          console.log("Firestore取得結果:", data);
+
+          console.log("Firestore Document ID:", printDoc.id);
+
+          // =====================================================
+          // 動画URL
+          // =====================================================
+
+          let videos = Array.isArray(data.videos)
+            ? data.videos
+                .filter((video) => video && (video.title || video.url))
+                .map((video) => ({
+                  title:
+                    typeof video.title === "string" ? video.title.trim() : "",
+                  url: typeof video.url === "string" ? video.url.trim() : "",
+                }))
+            : [];
+
+          // 旧形式の videoUrls にも対応
+          if (videos.length === 0 && Array.isArray(data.videoUrls)) {
+            videos = data.videoUrls
+              .filter((url) => typeof url === "string" && url.trim())
+              .map((url) => ({ title: "", url: url.trim() }));
+          }
+
+          const videoHtml = videos.length
+            ? videos
+                .map(({ title, url }, index) => {
+                  const displayTitle = title || `動画 ${index + 1}`;
+
+                  if (/^https?:\/\//i.test(url)) {
+                    return `
+                      <a
+                        href="${escapeAttribute(url)}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="video-link"
+                      >
+                        🎬 ${escapeHtml(displayTitle)}
+                      </a>
+                    `;
+                  }
+
+                  return `<span>${escapeHtml(displayTitle)}</span>`;
+                })
+                .join("")
+            : "動画なし";
+
+          // =====================================================
+          // プリント表示
+          // =====================================================
+
+          printInfo.innerHTML = `
+
+          <div class="info-row">
+
+            <strong>タイトル</strong>
+
+            <span>
+              ${escapeHtml(data.title || "未設定")}
+            </span>
+
+          </div>
+
+
+          <div class="info-row">
+
+            <strong>科目</strong>
+
+            <span>
+              ${escapeHtml(data.subject || "未設定")}
+            </span>
+
+          </div>
+
+
+          <div class="info-row">
+
+            <strong>単元</strong>
+
+            <span>
+              ${escapeHtml(data.unit || "未設定")}
+            </span>
+
+          </div>
+
+
+          <div class="info-row">
+
+            <strong>配布日</strong>
+
+            <span>
+              ${escapeHtml(data.distributedDate || "未設定")}
+            </span>
+
+          </div>
+
+
+          <div class="info-row">
+
+            <strong>提出期限</strong>
+
+            <span>
+              ${escapeHtml(data.dueDate || "設定なし")}
+            </span>
+
+          </div>
+
+
+          <div class="info-row">
+
+            <strong>メモ</strong>
+
+            <span>
+              ${escapeHtml(data.memo || "なし")}
+            </span>
+
+          </div>
+
+
+          <div class="info-row">
+
+            <strong>動画</strong>
+
+            <span>
+              ${videoHtml}
+            </span>
+
+          </div>
+
+          <button
+            type="button"
+            id="openPrintManagementButton"
+            class="secondary-button"
+          >
+            プリント管理画面で開く
+          </button>
+
+        `;
+
+          document
+            .getElementById("openPrintManagementButton")
+            .addEventListener("click", () => {
+              location.href = `prints.html?qrId=${encodeURIComponent(qrId)}`;
+            });
+
+          // =====================================================
+          // QR停止
+          // =====================================================
+
+          try {
+            await scanner.clear();
+          } catch (error) {
+            console.log("scanner停止:", error);
+          }
+        } catch (error) {
+          console.error("Firestore取得エラー:", error);
+
+          printInfo.innerHTML = `
+
+          <p>
+            プリント情報の取得に失敗しました。
+          </p>
+
+          <p>
+            ${escapeHtml(error.message || "")}
+          </p>
+
+        `;
+        }
+      }
+
+      // =========================================================
+      // HTMLエスケープ
+      // =========================================================
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function escapeAttribute(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;");
+      }
+
+      // =========================================================
+      // QR読み取り失敗
+      // =========================================================
+
+      function onScanFailure(error) {
+        // 読み取り失敗は何もしない
+      }
+
+      // =========================================================
+      // QRスキャナー
+      // =========================================================
+
+      const scanner = new Html5QrcodeScanner(
+        "reader",
+        {
+          fps: 10,
+
+          qrbox: {
+            width: 250,
+            height: 250,
+          },
+        },
+        false,
+      );
+
+      scanner.render(onScanSuccess, onScanFailure);
+
+      // =========================================================
+      // ログアウト
+      // =========================================================
+
+      window.logout = async function () {
+        try {
+          await signOut(auth);
+
+          location.href = "login.html";
+        } catch (error) {
+          console.error("ログアウトエラー:", error);
+
+          alert("ログアウトに失敗しました。");
+        }
+      };
+    </script>
+  </body>
+</html>

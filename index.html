@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>プリント管理ホーム</title>
+
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+      .home-container {
+        width: min(620px, 92%);
+        margin: 64px auto;
+      }
+
+      .home-header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .home-header h1 {
+        margin-bottom: 10px;
+      }
+
+      .home-header p {
+        color: #666;
+        margin: 0;
+      }
+
+      .home-links {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+      }
+
+      .home-link {
+        display: block;
+        min-height: 170px;
+        padding: 24px;
+        border-radius: 20px;
+        background: #fff;
+        color: inherit;
+        text-decoration: none;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06);
+        transition:
+          transform 0.15s ease,
+          box-shadow 0.15s ease;
+      }
+
+      .home-link:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 9px 24px rgba(0, 0, 0, 0.1);
+      }
+
+      .home-link .icon {
+        display: block;
+        margin-bottom: 14px;
+        font-size: 32px;
+      }
+
+      .home-link h2 {
+        margin: 0 0 8px;
+        font-size: 20px;
+      }
+
+      .home-link p {
+        margin: 0;
+        color: #666;
+        line-height: 1.6;
+      }
+
+      .home-footer {
+        margin-top: 22px;
+        text-align: center;
+      }
+
+      .qr-card h2 {
+        margin-top: 0;
+      }
+
+      .qr-preview {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 20px 0;
+      }
+
+      #qrcode {
+        min-height: 252px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #qrcode:empty {
+        width: 252px;
+        height: 252px;
+        border: 1px dashed #ccc;
+        border-radius: 8px;
+      }
+
+      #qrCaption {
+        max-width: 252px;
+        margin: 6px 0 0;
+        color: #333;
+        text-align: center;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        font-size: 30px;
+        line-height: 1.2;
+      }
+
+      .qr-hint {
+        margin: 0;
+        color: #777;
+        font-size: 14px;
+      }
+
+      .logout-button {
+        width: auto;
+        margin-top: 0;
+        padding: 10px 18px;
+        background: #eee;
+        color: #333;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="home-container" id="home" hidden>
+      <header class="home-header">
+        <h1>📄 プリント管理</h1>
+        <p>利用する機能を選んでください。</p>
+      </header>
+
+      <nav class="home-links" aria-label="メインメニュー">
+        <a class="home-link" href="prints.html">
+          <span class="icon" aria-hidden="true">📚</span>
+          <h2>プリント一覧</h2>
+          <p>保存したプリントの確認・編集をします。</p>
+        </a>
+
+        <a class="home-link" href="reader.html">
+          <span class="icon" aria-hidden="true">📷</span>
+          <h2>QRコードを読み取る</h2>
+          <p>プリントのQRコードを読み取って情報を確認します。</p>
+        </a>
+      </nav>
+
+      <section class="card qr-card" aria-labelledby="qrHeading">
+        <h2 id="qrHeading">QRコードを作成</h2>
+        <p class="qr-hint">
+          文字と番号を入力すると、「文字-番号」形式のQRコードを作成します。
+        </p>
+
+        <label for="qrPrefix">文字</label>
+        <input id="qrPrefix" type="text" value="P-E" placeholder="例：P-E" />
+
+        <label for="qrNumber">番号</label>
+        <input id="qrNumber" type="number" min="1" step="1" value="1" />
+        <p class="qr-hint">
+          例：文字が P-E、番号が 1 の場合は P-E-001 になります。
+        </p>
+
+        <button id="generateQrButton" type="button">
+          QRコードを作成して保存
+        </button>
+
+        <div class="qr-preview" aria-live="polite">
+          <div id="qrcode" aria-label="生成されたQRコード"></div>
+          <p id="qrCaption"></p>
+        </div>
+        <p
+          id="qrSaveStatus"
+          class="qr-hint"
+          role="status"
+          aria-live="polite"
+        ></p>
+      </section>
+
+      <footer class="home-footer">
+        <button class="logout-button" id="logoutButton" type="button">
+          ログアウト
+        </button>
+      </footer>
+    </main>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+
+      import {
+        getAuth,
+        onAuthStateChanged,
+        signOut,
+      } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+
+      // =========================================================
+      // Firebase設定
+      // =========================================================
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyAha3w3vxJGMXYIv49aIn9V0no1zL604bA",
+
+        authDomain: "print-c744c.firebaseapp.com",
+
+        databaseURL: "https://print-c744c-default-rtdb.firebaseio.com/",
+
+        projectId: "print-c744c",
+
+        storageBucket: "print-c744c.firebasestorage.app",
+
+        messagingSenderId: "728050825677",
+
+        appId: "1:728050825677:web:e08101a72cb215f0f56c84",
+      };
+
+      // =========================================================
+      // Firebase初期化
+      // =========================================================
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+
+      // =========================================================
+      // ログイン状態チェック
+      // =========================================================
+
+      onAuthStateChanged(auth, (user) => {
+        if (!user) {
+          location.href = "login.html";
+          return;
+        }
+
+        document.getElementById("home").hidden = false;
+      });
+
+      // =========================================================
+      // ログアウト
+      // =========================================================
+
+      document
+        .getElementById("logoutButton")
+        .addEventListener("click", async () => {
+          try {
+            await signOut(auth);
+            location.href = "login.html";
+          } catch (error) {
+            console.error("ログアウトエラー:", error);
+            alert("ログアウトに失敗しました。");
+          }
+        });
+
+      const qrPrefixInput = document.getElementById("qrPrefix");
+      const qrNumberInput = document.getElementById("qrNumber");
+      const qrCodeArea = document.getElementById("qrcode");
+      const qrCaption = document.getElementById("qrCaption");
+      const qrSaveStatus = document.getElementById("qrSaveStatus");
+      const qrNumberStoragePrefix = "printQrNextNumber:";
+
+      function getNextNumber(prefix) {
+        try {
+          const savedNumber = localStorage.getItem(
+            `${qrNumberStoragePrefix}${prefix}`,
+          );
+          return savedNumber && Number(savedNumber) > 0 ? savedNumber : "1";
+        } catch (error) {
+          console.warn("次のQR番号を読み込めませんでした:", error);
+          return "1";
+        }
+      }
+
+      function saveNextNumber(prefix, number) {
+        try {
+          localStorage.setItem(`${qrNumberStoragePrefix}${prefix}`, number);
+        } catch (error) {
+          console.warn("次のQR番号を保存できませんでした:", error);
+        }
+      }
+
+      qrNumberInput.value = getNextNumber(qrPrefixInput.value.trim());
+
+      qrPrefixInput.addEventListener("change", () => {
+        qrNumberInput.value = getNextNumber(qrPrefixInput.value.trim());
+      });
+
+      document
+        .getElementById("generateQrButton")
+        .addEventListener("click", () => {
+          const prefix = qrPrefixInput.value.trim();
+          const number = Number(qrNumberInput.value);
+
+          if (!prefix) {
+            alert("文字を入力してください。");
+            qrPrefixInput.focus();
+            return;
+          }
+
+          if (!Number.isInteger(number) || number < 1) {
+            alert("番号は1以上の整数を入力してください。");
+            qrNumberInput.focus();
+            return;
+          }
+
+          const formattedNumber = String(number).padStart(3, "0");
+          const qrContent = `${prefix}-${formattedNumber}`;
+
+          qrCodeArea.innerHTML = "";
+          new QRCode(qrCodeArea, {
+            text: qrContent,
+            width: 252,
+            height: 252,
+            correctLevel: QRCode.CorrectLevel.M,
+          });
+
+          qrCaption.textContent = qrContent;
+          qrSaveStatus.textContent = "";
+
+          if (!downloadQrImage()) {
+            return;
+          }
+
+          const nextNumber = number + 1;
+          qrNumberInput.value = String(nextNumber);
+          saveNextNumber(prefix, String(nextNumber));
+          qrSaveStatus.textContent = `保存しました。次の番号は ${prefix}-${String(nextNumber).padStart(3, "0")} です。`;
+        });
+
+      function downloadQrImage() {
+        const qrCanvas = qrCodeArea.querySelector("canvas");
+
+        if (!qrCanvas) {
+          alert("先にQRコードを生成してください。");
+          return false;
+        }
+
+        const imageCanvas = document.createElement("canvas");
+        const context = imageCanvas.getContext("2d");
+        const padding = 24;
+        const qrSize = 252;
+        const text = qrCaption.textContent.trim();
+        const lineHeight = 36;
+        const captionGap = 6;
+        const bottomPadding = 32;
+        const maxTextWidth = qrSize;
+        const lines = [];
+
+        context.font =
+          '30px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif';
+        if (text) {
+          text.split("\n").forEach((paragraph) => {
+            let line = "";
+
+            for (const character of paragraph) {
+              const candidate = line + character;
+              if (line && context.measureText(candidate).width > maxTextWidth) {
+                lines.push(line);
+                line = character;
+              } else {
+                line = candidate;
+              }
+            }
+
+            lines.push(line);
+          });
+        }
+
+        imageCanvas.width = qrSize + padding * 2;
+        imageCanvas.height = lines.length
+          ? padding +
+            qrSize +
+            captionGap +
+            lines.length * lineHeight +
+            bottomPadding
+          : qrSize + padding * 2;
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, imageCanvas.width, imageCanvas.height);
+        context.drawImage(qrCanvas, padding, padding, qrSize, qrSize);
+
+        if (lines.length) {
+          context.fillStyle = "#222222";
+          context.font =
+            '30px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif';
+          context.textAlign = "center";
+          context.textBaseline = "top";
+          lines.forEach((captionLine, index) => {
+            context.fillText(
+              captionLine,
+              imageCanvas.width / 2,
+              padding + qrSize + captionGap + index * lineHeight,
+            );
+          });
+        }
+
+        const link = document.createElement("a");
+        const fileName = (qrCaption.textContent.trim() || "qr-code").replace(
+          /[\\/:*?"<>|\r\n]/g,
+          "_",
+        );
+        link.download = `${fileName}.png`;
+        link.href = imageCanvas.toDataURL("image/png");
+        link.click();
+        return true;
+      }
+    </script>
+  </body>
+</html>

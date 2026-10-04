@@ -1,0 +1,1334 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>プリント一覧</title>
+
+    <link rel="stylesheet" href="style.css" />
+
+    <style>
+      .filter-area {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 15px;
+      }
+
+      .filter-button {
+        width: auto;
+        padding: 9px 14px;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        background: rgb(210, 210, 210);
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .filter-button.active {
+        background: #222;
+        color: white;
+        border-color: #222;
+      }
+
+      .print-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .print-item {
+        border: 1px solid #ddd;
+        border-radius: 14px;
+        padding: 16px;
+        background: white;
+        cursor: pointer;
+        transition: 0.15s;
+      }
+
+      .print-item:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      }
+
+      .print-item:active {
+        transform: scale(0.99);
+      }
+
+      .print-subject {
+        display: inline-block;
+        padding: 4px 9px;
+        border-radius: 8px;
+        background: #f0f0f0;
+        font-size: 13px;
+        margin-bottom: 10px;
+      }
+
+      .print-item[data-subject="国語"],
+      .print-subject[data-subject="国語"],
+      .filter-button[data-subject="国語"]:not(.active) {
+        background: #ff9aa2;
+      }
+
+      .print-item[data-subject="数学"],
+      .print-subject[data-subject="数学"],
+      .filter-button[data-subject="数学"]:not(.active) {
+        background: #bde0fe;
+      }
+
+      .print-item[data-subject="社会"],
+      .print-subject[data-subject="社会"],
+      .filter-button[data-subject="社会"]:not(.active) {
+        background: #fdfd96;
+      }
+
+      .print-item[data-subject="理科"],
+      .print-subject[data-subject="理科"],
+      .filter-button[data-subject="理科"]:not(.active) {
+        background: #bdfcc9;
+      }
+
+      .print-item[data-subject="英語"],
+      .print-subject[data-subject="英語"],
+      .filter-button[data-subject="英語"]:not(.active) {
+        background: #d8bfd8;
+      }
+
+      .print-item h3 {
+        margin: 0 0 8px;
+      }
+
+      .print-info {
+        margin: 5px 0;
+        color: #555;
+        font-size: 14px;
+      }
+
+      .print-id {
+        margin-top: 10px;
+        font-size: 12px;
+        color: #999;
+        word-break: break-all;
+      }
+
+      .empty-message,
+      .loading {
+        text-align: center;
+        color: #777;
+        padding: 30px 10px;
+      }
+
+      /* =====================================================
+       詳細・編集画面
+    ===================================================== */
+
+      #detailScreen {
+        display: none;
+      }
+
+      .detail-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+
+      .detail-header .back-button {
+        width: auto;
+        flex-shrink: 0;
+        margin: 0;
+      }
+
+      .back-button {
+        border: none;
+        background: #f0f0f0;
+        border-radius: 10px;
+        padding: 9px 14px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .detail-id {
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: #f5f5f5;
+        color: #777;
+        font-size: 13px;
+        word-break: break-all;
+        margin-bottom: 20px;
+      }
+
+      .save-detail-button {
+        width: 100%;
+        margin-top: 10px;
+      }
+
+      .delete-print-button {
+        width: 100%;
+        margin-top: 8px;
+        border: 1px solid #f1c4c1;
+        background: #fff0ef;
+        color: #b42318;
+      }
+
+      .cancel-detail-button {
+        width: 100%;
+        margin-top: 8px;
+      }
+
+      .save-message {
+        text-align: center;
+        margin-top: 12px;
+        font-size: 14px;
+      }
+
+      /* =====================================================
+       動画
+    ===================================================== */
+
+      .video-section {
+        margin-top: 20px;
+      }
+
+      .video-section-title {
+        display: block;
+        margin-bottom: 10px;
+        font-weight: bold;
+      }
+
+      .video-row {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 14px;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        background: #fafafa;
+      }
+
+      .video-row input {
+        margin: 0;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .remove-video-button {
+        width: auto;
+        align-self: flex-end;
+        border: none;
+        background: #f3f3f3;
+        color: #555;
+        border-radius: 8px;
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+
+      .remove-video-button:hover {
+        background: #e8e8e8;
+      }
+
+      .add-video-button {
+        width: 100%;
+        margin-top: 4px;
+      }
+
+      .video-count {
+        font-size: 13px;
+        color: #777;
+        margin-top: 8px;
+      }
+
+      .video-list {
+        margin-top: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .video-link {
+        display: block;
+        word-break: break-all;
+        color: #1976d2;
+        font-size: 14px;
+        text-decoration: none;
+      }
+
+      .video-link:hover {
+        text-decoration: underline;
+      }
+
+      .video-title-display {
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 2px;
+      }
+
+      .video-view-item {
+        padding: 10px 12px;
+        border: 1px solid #eee;
+        border-radius: 10px;
+        background: #fafafa;
+      }
+
+      .detail-value-multiline {
+        white-space: pre-wrap;
+      }
+
+      .share-button {
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="container">
+      <!-- ===================================================
+       一覧画面
+    ===================================================== -->
+
+      <div id="listScreen">
+        <h1>📚 プリント一覧</h1>
+
+        <p class="description">保存されているプリントを確認できます。</p>
+
+        <!-- 科目フィルター -->
+
+        <section class="card">
+          <h2>科目</h2>
+
+          <div class="filter-area">
+            <button class="filter-button active" data-subject="すべて">
+              すべて
+            </button>
+
+            <button class="filter-button" data-subject="国語">国語</button>
+
+            <button class="filter-button" data-subject="数学">数学</button>
+
+            <button class="filter-button" data-subject="英語">英語</button>
+
+            <button class="filter-button" data-subject="理科">理科</button>
+
+            <button class="filter-button" data-subject="社会">社会</button>
+
+            <button class="filter-button" data-subject="その他">その他</button>
+          </div>
+        </section>
+
+        <!-- プリント一覧 -->
+
+        <section class="card">
+          <div class="list-header">
+            <h2>保存したプリント</h2>
+
+            <button id="reloadButton" class="reload-button">↻ 更新</button>
+          </div>
+
+          <div id="printList" class="print-list">
+            <p class="loading">プリントを読み込んでいます...</p>
+          </div>
+        </section>
+      </div>
+
+      <!-- ===================================================
+       詳細・編集画面
+    ===================================================== -->
+
+      <div id="detailScreen">
+        <section id="viewMode" class="card">
+          <div class="detail-header">
+            <button type="button" id="backToListButton" class="back-button">
+              ← 一覧
+            </button>
+            <h1 style="margin: 0">プリント詳細</h1>
+          </div>
+
+          <div id="viewContent"></div>
+
+          <button id="editButton" class="save-button save-detail-button">
+            編集
+          </button>
+          <button
+            type="button"
+            id="shareButton"
+            class="secondary-button share-button"
+          >
+            共有URLをコピー
+          </button>
+        </section>
+
+        <section id="editMode" class="card" style="display: none">
+          <div class="detail-header">
+            <h1 style="margin: 0">プリント編集</h1>
+          </div>
+
+          <!-- Document ID -->
+
+          <div id="detailId" class="detail-id"></div>
+
+          <!-- タイトル -->
+
+          <label for="editTitle"> タイトル </label>
+
+          <input
+            type="text"
+            id="editTitle"
+            placeholder="例：二次関数 練習問題"
+          />
+
+          <!-- 科目 -->
+
+          <label for="editSubject"> 科目 </label>
+
+          <select id="editSubject">
+            <option value="国語">国語</option>
+
+            <option value="数学">数学</option>
+
+            <option value="英語">英語</option>
+
+            <option value="理科">理科</option>
+
+            <option value="社会">社会</option>
+
+            <option value="その他">その他</option>
+          </select>
+
+          <!-- 単元 -->
+
+          <label for="editUnit"> 単元 </label>
+
+          <input type="text" id="editUnit" placeholder="例：二次関数" />
+
+          <!-- 提出期限 -->
+
+          <label for="editDueDate"> 提出期限 </label>
+
+          <input type="date" id="editDueDate" />
+
+          <!-- メモ -->
+
+          <label for="editMemo"> メモ </label>
+
+          <textarea
+            id="editMemo"
+            placeholder="メモを入力してください"
+            rows="5"
+          ></textarea>
+
+          <!-- =================================================
+           動画
+        ================================================== -->
+
+          <div class="video-section">
+            <span class="video-section-title"> 動画 </span>
+
+            <div id="videoUrlList"></div>
+
+            <button
+              type="button"
+              id="addVideoButton"
+              class="secondary-button add-video-button"
+            >
+              ＋ 動画を追加
+            </button>
+
+            <p id="videoCount" class="video-count">
+              動画は登録されていません。
+            </p>
+          </div>
+
+          <!-- 保存 -->
+
+          <button id="saveButton" class="save-button save-detail-button">
+            保存
+          </button>
+
+          <!-- キャンセル -->
+
+          <button
+            id="cancelButton"
+            class="secondary-button cancel-detail-button"
+          >
+            閲覧に戻る
+          </button>
+
+          <button
+            type="button"
+            id="deletePrintButton"
+            class="delete-print-button"
+          >
+            このプリントを削除
+          </button>
+
+          <p id="saveMessage" class="save-message" style="display: none"></p>
+        </section>
+      </div>
+    </main>
+
+    <!-- =====================================================
+     Firebase
+  ====================================================== -->
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+
+      import {
+        getFirestore,
+        collection,
+        getDocs,
+        doc,
+        updateDoc,
+        deleteDoc,
+      } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+      import {
+        getAuth,
+        onAuthStateChanged,
+      } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+
+      // =====================================================
+      // Firebase設定
+      // =====================================================
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyAha3w3vxJGMXYIv49aIn9V0no1zL604bA",
+
+        authDomain: "print-c744c.firebaseapp.com",
+
+        databaseURL: "https://print-c744c-default-rtdb.firebaseio.com/",
+
+        projectId: "print-c744c",
+
+        storageBucket: "print-c744c.firebasestorage.app",
+
+        messagingSenderId: "728050825677",
+
+        appId: "1:728050825677:web:e08101a72cb215f0f56c84",
+      };
+
+      // =====================================================
+      // Firebase初期化
+      // =====================================================
+
+      const app = initializeApp(firebaseConfig);
+
+      const db = getFirestore(app);
+
+      const auth = getAuth(app);
+
+      // =====================================================
+      // HTML
+      // =====================================================
+
+      const listScreen = document.getElementById("listScreen");
+
+      const detailScreen = document.getElementById("detailScreen");
+
+      const viewMode = document.getElementById("viewMode");
+
+      const editMode = document.getElementById("editMode");
+
+      const viewContent = document.getElementById("viewContent");
+
+      const editButton = document.getElementById("editButton");
+
+      const backToListButton = document.getElementById("backToListButton");
+
+      const shareButton = document.getElementById("shareButton");
+
+      const printList = document.getElementById("printList");
+
+      const reloadButton = document.getElementById("reloadButton");
+
+      const cancelButton = document.getElementById("cancelButton");
+
+      const saveButton = document.getElementById("saveButton");
+
+      const deletePrintButton = document.getElementById("deletePrintButton");
+
+      const saveMessage = document.getElementById("saveMessage");
+
+      const detailId = document.getElementById("detailId");
+
+      const editTitle = document.getElementById("editTitle");
+
+      const editSubject = document.getElementById("editSubject");
+
+      const editUnit = document.getElementById("editUnit");
+
+      const editDueDate = document.getElementById("editDueDate");
+
+      const editMemo = document.getElementById("editMemo");
+
+      const videoUrlList = document.getElementById("videoUrlList");
+
+      const addVideoButton = document.getElementById("addVideoButton");
+
+      const videoCount = document.getElementById("videoCount");
+
+      const filterButtons = document.querySelectorAll(".filter-button");
+
+      // =====================================================
+      // データ
+      // =====================================================
+
+      let currentSubject = "すべて";
+
+      let allPrints = [];
+
+      let editingPrintId = null;
+
+      // =====================================================
+      // ログイン確認
+      // =====================================================
+
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+          console.log("未ログイン → login.html");
+
+          location.href = "login.html";
+
+          return;
+        }
+
+        console.log("ログイン中:", user.email);
+
+        await loadPrints();
+      });
+
+      // =====================================================
+      // Firestoreから全プリント取得
+      // =====================================================
+
+      async function loadPrints() {
+        printList.innerHTML = `
+        <p class="loading">
+          プリントを読み込んでいます...
+        </p>
+      `;
+
+        try {
+          const snapshot = await getDocs(collection(db, "prints"));
+
+          allPrints = [];
+
+          snapshot.forEach((docSnapshot) => {
+            const data = docSnapshot.data();
+
+            allPrints.push({
+              id: docSnapshot.id,
+
+              ...data,
+            });
+          });
+
+          console.log("取得したプリント:", allPrints);
+
+          renderPrints();
+
+          openSharedPrintFromUrl();
+        } catch (error) {
+          console.error("プリント取得エラー:", error);
+
+          printList.innerHTML = `
+          <p class="empty-message">
+            プリントの取得に失敗しました。
+          </p>
+        `;
+        }
+      }
+
+      // =====================================================
+      // 一覧表示
+      // =====================================================
+
+      function renderPrints() {
+        const filteredPrints =
+          currentSubject === "すべて"
+            ? allPrints
+            : allPrints.filter((print) => print.subject === currentSubject);
+
+        if (filteredPrints.length === 0) {
+          printList.innerHTML = `
+          <p class="empty-message">
+            この科目のプリントはありません。
+          </p>
+        `;
+
+          return;
+        }
+
+        printList.innerHTML = filteredPrints
+          .map((print) => {
+            const videos = normalizeVideos(print);
+
+            const videoText =
+              videos.length > 0 ? `動画 ${videos.length}本` : "動画なし";
+
+            return `
+
+              <article
+                class="print-item"
+                data-print-id="${escapeHtml(print.id)}"
+                data-subject="${escapeHtml(print.subject || "")}" 
+              >
+
+                <span
+                  class="print-subject"
+                  data-subject="${escapeHtml(print.subject || "")}" 
+                >
+                  ${escapeHtml(print.subject || "未設定")}
+                </span>
+
+
+                <h3>
+                  ${escapeHtml(print.title || "タイトル未設定")}
+                </h3>
+
+
+                <p class="print-info">
+                  <strong>単元：</strong>
+                  ${escapeHtml(print.unit || "未設定")}
+                </p>
+
+
+                <p class="print-info">
+                  <strong>配布日：</strong>
+                  ${escapeHtml(print.distributedDate || "未設定")}
+                </p>
+
+
+                <p class="print-info">
+                  <strong>提出期限：</strong>
+                  ${escapeHtml(print.dueDate || "設定なし")}
+                </p>
+
+
+                <p class="print-info">
+                  <strong>メモ：</strong>
+                  ${escapeHtml(print.memo || "なし")}
+                </p>
+
+
+                <p class="print-info">
+                  <strong>動画：</strong>
+                  ${videoText}
+                </p>
+
+
+                <div class="print-id">
+                  ID：
+                  ${escapeHtml(print.id)}
+                </div>
+
+              </article>
+
+            `;
+          })
+          .join("");
+
+        // ===================================================
+        // カードクリック
+        // ===================================================
+
+        document.querySelectorAll(".print-item").forEach((card) => {
+          card.addEventListener("click", () => {
+            const id = card.dataset.printId;
+
+            openDetailScreen(id);
+          });
+        });
+      }
+
+      function openSharedPrintFromUrl() {
+        const qrId = new URLSearchParams(window.location.search).get("qrId");
+
+        if (!qrId) {
+          return;
+        }
+
+        const print = allPrints.find(
+          (item) => String(item.qrId || "") === qrId,
+        );
+
+        if (print) {
+          openDetailScreen(print.id);
+          return;
+        }
+
+        printList.innerHTML = `
+          <p class="empty-message">
+            QRコードID「${escapeHtml(qrId)}」のプリントが見つかりません。
+          </p>
+        `;
+      }
+
+      // =====================================================
+      // 詳細画面
+      // =====================================================
+
+      function openDetailScreen(printId) {
+        const print = allPrints.find((item) => item.id === printId);
+
+        if (!print) {
+          console.error("プリントが見つかりません:", printId);
+
+          return;
+        }
+
+        editingPrintId = printId;
+
+        updateQrIdInUrl(print.qrId);
+
+        shareButton.hidden = !print.qrId;
+
+        populateEditor(print);
+
+        renderPrintDetails(print);
+
+        saveMessage.style.display = "none";
+
+        listScreen.style.display = "none";
+
+        detailScreen.style.display = "block";
+
+        showDetailMode("view");
+
+        window.scrollTo(0, 0);
+      }
+
+      function populateEditor(print) {
+        detailId.textContent = `プリントID：${print.id}`;
+
+        editTitle.value = print.title || "";
+
+        editSubject.value = print.subject || "その他";
+
+        editUnit.value = print.unit || "";
+
+        editDueDate.value = print.dueDate || "";
+
+        editMemo.value = print.memo || "";
+
+        renderVideoInputs(normalizeVideos(print));
+      }
+
+      function showDetailMode(mode) {
+        const isViewing = mode === "view";
+
+        viewMode.style.display = isViewing ? "block" : "none";
+
+        editMode.style.display = isViewing ? "none" : "block";
+      }
+
+      function renderPrintDetails(print) {
+        const videos = normalizeVideos(print);
+
+        const videoHtml = videos.length
+          ? videos
+              .map((video, index) => {
+                const title = video.title.trim() || `動画 ${index + 1}`;
+                const url = video.url.trim();
+                const urlHtml = /^https?:\/\//i.test(url)
+                  ? `<a class="video-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>`
+                  : url
+                    ? `<span>${escapeHtml(url)}</span>`
+                    : "";
+
+                return `
+                  <div class="video-view-item">
+                    <div class="video-title-display">${escapeHtml(title)}</div>
+                    ${urlHtml}
+                  </div>
+                `;
+              })
+              .join("")
+          : '<p class="empty-message">動画は登録されていません。</p>';
+
+        viewContent.innerHTML = `
+          <div class="detail-id">プリントID：${escapeHtml(print.id)}</div>
+          <div class="info-row">
+            <strong>タイトル</strong>
+            <span>${escapeHtml(print.title || "未設定")}</span>
+          </div>
+          <div class="info-row">
+            <strong>科目</strong>
+            <span>${escapeHtml(print.subject || "未設定")}</span>
+          </div>
+          <div class="info-row">
+            <strong>単元</strong>
+            <span>${escapeHtml(print.unit || "未設定")}</span>
+          </div>
+          <div class="info-row">
+            <strong>配布日</strong>
+            <span>${escapeHtml(print.distributedDate || "未設定")}</span>
+          </div>
+          <div class="info-row">
+            <strong>提出期限</strong>
+            <span>${escapeHtml(print.dueDate || "設定なし")}</span>
+          </div>
+          <div class="info-row">
+            <strong>メモ</strong>
+            <span class="detail-value-multiline">${escapeHtml(print.memo || "なし")}</span>
+          </div>
+          <div class="info-row">
+            <strong>動画</strong>
+            <div class="video-list">${videoHtml}</div>
+          </div>
+        `;
+      }
+
+      // =====================================================
+      // 動画データを統一
+      // =====================================================
+
+      function normalizeVideos(print) {
+        // 新形式
+        //
+        // videos: [
+        //   {
+        //     title: "...",
+        //     url: "..."
+        //   }
+        // ]
+
+        if (Array.isArray(print.videos)) {
+          return print.videos
+            .filter((video) => video && (video.title || video.url))
+            .map((video) => ({
+              title: typeof video.title === "string" ? video.title : "",
+
+              url: typeof video.url === "string" ? video.url : "",
+            }));
+        }
+
+        // ===================================================
+        // 旧形式
+        //
+        // videoUrls: [
+        //   "https://..."
+        // ]
+        // ===================================================
+
+        if (Array.isArray(print.videoUrls)) {
+          return print.videoUrls
+            .filter((url) => typeof url === "string" && url.trim())
+            .map((url) => ({
+              title: "",
+              url: url.trim(),
+            }));
+        }
+
+        // 古い単一URLにも対応
+
+        if (typeof print.videoUrl === "string" && print.videoUrl.trim()) {
+          return [
+            {
+              title: "",
+              url: print.videoUrl.trim(),
+            },
+          ];
+        }
+
+        return [];
+      }
+
+      // =====================================================
+      // 動画入力欄を表示
+      // =====================================================
+
+      function renderVideoInputs(videos) {
+        videoUrlList.innerHTML = "";
+
+        videos.forEach((video) => {
+          addVideoInput(video.title, video.url);
+        });
+
+        updateVideoCount();
+      }
+
+      // =====================================================
+      // 動画入力欄追加
+      // =====================================================
+
+      function addVideoInput(title = "", url = "") {
+        const row = document.createElement("div");
+
+        row.className = "video-row";
+
+        // タイトル
+
+        const titleInput = document.createElement("input");
+
+        titleInput.type = "text";
+
+        titleInput.placeholder = "動画タイトル";
+
+        titleInput.value = title;
+
+        titleInput.className = "video-title-input";
+
+        // URL
+
+        const urlInput = document.createElement("input");
+
+        urlInput.type = "url";
+
+        urlInput.placeholder = "https://www.youtube.com/watch?v=...";
+
+        urlInput.value = url;
+
+        urlInput.className = "video-url-input";
+
+        // 削除
+
+        const removeButton = document.createElement("button");
+
+        removeButton.type = "button";
+
+        removeButton.className = "remove-video-button";
+
+        removeButton.textContent = "削除";
+
+        removeButton.addEventListener("click", () => {
+          row.remove();
+
+          updateVideoCount();
+        });
+
+        row.appendChild(titleInput);
+
+        row.appendChild(urlInput);
+
+        row.appendChild(removeButton);
+
+        videoUrlList.appendChild(row);
+
+        updateVideoCount();
+      }
+
+      // =====================================================
+      // 動画追加
+      // =====================================================
+
+      addVideoButton.addEventListener("click", () => {
+        addVideoInput();
+      });
+
+      // =====================================================
+      // 動画本数
+      // =====================================================
+
+      function updateVideoCount() {
+        const rows = videoUrlList.querySelectorAll(".video-row");
+
+        let count = 0;
+
+        rows.forEach((row) => {
+          const url = row.querySelector(".video-url-input").value.trim();
+
+          if (url) {
+            count++;
+          }
+        });
+
+        if (count === 0) {
+          videoCount.textContent = "動画は登録されていません。";
+        } else {
+          videoCount.textContent = `現在 ${count}本の動画が登録されています。`;
+        }
+      }
+
+      // =====================================================
+      // 詳細画面を閉じる
+      // =====================================================
+
+      function closeDetailScreen() {
+        editingPrintId = null;
+
+        updateQrIdInUrl(null);
+
+        detailScreen.style.display = "none";
+
+        listScreen.style.display = "block";
+
+        window.scrollTo(0, 0);
+      }
+
+      editButton.addEventListener("click", () => {
+        showDetailMode("edit");
+        window.scrollTo(0, 0);
+      });
+
+      backToListButton.addEventListener("click", closeDetailScreen);
+
+      deletePrintButton.addEventListener("click", async () => {
+        if (!editingPrintId) {
+          return;
+        }
+
+        const print = allPrints.find((item) => item.id === editingPrintId);
+        const printTitle = print?.title || "このプリント";
+
+        if (
+          !window.confirm(
+            `「${printTitle}」を削除しますか？\nこの操作は取り消せません。`,
+          )
+        ) {
+          return;
+        }
+
+        deletePrintButton.disabled = true;
+        saveButton.disabled = true;
+        deletePrintButton.textContent = "削除しています...";
+
+        try {
+          await deleteDoc(doc(db, "prints", editingPrintId));
+
+          allPrints = allPrints.filter((item) => item.id !== editingPrintId);
+
+          closeDetailScreen();
+          renderPrints();
+          alert("プリントを削除しました。");
+        } catch (error) {
+          console.error("プリント削除エラー:", error);
+          saveMessage.textContent =
+            "削除に失敗しました。時間をおいて再度お試しください。";
+          saveMessage.style.display = "block";
+        } finally {
+          deletePrintButton.disabled = false;
+          saveButton.disabled = false;
+          deletePrintButton.textContent = "このプリントを削除";
+        }
+      });
+
+      shareButton.addEventListener("click", async () => {
+        const print = allPrints.find((item) => item.id === editingPrintId);
+
+        if (!print || !print.qrId) {
+          return;
+        }
+
+        const shareUrl = new URL(window.location.href);
+
+        shareUrl.searchParams.set("qrId", print.qrId);
+
+        try {
+          await navigator.clipboard.writeText(shareUrl.href);
+
+          shareButton.textContent = "コピーしました";
+
+          setTimeout(() => {
+            shareButton.textContent = "共有URLをコピー";
+          }, 1800);
+        } catch (error) {
+          window.prompt("このURLをコピーして共有してください。", shareUrl.href);
+        }
+      });
+
+      cancelButton.addEventListener("click", () => {
+        const print = allPrints.find((item) => item.id === editingPrintId);
+
+        if (print) {
+          populateEditor(print);
+        }
+
+        saveMessage.style.display = "none";
+        showDetailMode("view");
+        window.scrollTo(0, 0);
+      });
+
+      // =====================================================
+      // 保存
+      // =====================================================
+
+      saveButton.addEventListener("click", async () => {
+        if (!editingPrintId) {
+          return;
+        }
+
+        const title = editTitle.value.trim();
+
+        const subject = editSubject.value;
+
+        const unit = editUnit.value.trim();
+
+        const dueDate = editDueDate.value;
+
+        const memo = editMemo.value.trim();
+
+        // =================================================
+        // 動画取得
+        // =================================================
+
+        const rows = videoUrlList.querySelectorAll(".video-row");
+
+        const videos = [];
+
+        rows.forEach((row) => {
+          const videoTitle = row
+            .querySelector(".video-title-input")
+            .value.trim();
+
+          const videoUrl = row.querySelector(".video-url-input").value.trim();
+
+          // URLがあるものだけ保存
+
+          if (videoUrl) {
+            videos.push({
+              title: videoTitle,
+
+              url: videoUrl,
+            });
+          }
+        });
+
+        // =================================================
+        // 保存中
+        // =================================================
+
+        saveButton.disabled = true;
+
+        deletePrintButton.disabled = true;
+
+        saveButton.textContent = "保存しています...";
+
+        saveMessage.style.display = "none";
+
+        try {
+          const printRef = doc(db, "prints", editingPrintId);
+
+          await updateDoc(printRef, {
+            title: title,
+
+            subject: subject,
+
+            unit: unit,
+
+            dueDate: dueDate,
+
+            memo: memo,
+
+            videos: videos,
+
+            updatedAt: Date.now(),
+          });
+
+          console.log("プリントを更新しました:", editingPrintId);
+
+          // =================================================
+          // ローカルデータ更新
+          // =================================================
+
+          const index = allPrints.findIndex(
+            (print) => print.id === editingPrintId,
+          );
+
+          if (index !== -1) {
+            allPrints[index] = {
+              ...allPrints[index],
+
+              title: title,
+
+              subject: subject,
+
+              unit: unit,
+
+              dueDate: dueDate,
+
+              memo: memo,
+
+              videos: videos,
+
+              updatedAt: Date.now(),
+            };
+          }
+
+          saveMessage.textContent = "保存しました。";
+
+          saveMessage.style.display = "block";
+
+          setTimeout(() => {
+            const updatedPrint = allPrints.find(
+              (print) => print.id === editingPrintId,
+            );
+
+            if (updatedPrint) {
+              renderPrintDetails(updatedPrint);
+            }
+
+            renderPrints();
+            showDetailMode("view");
+            window.scrollTo(0, 0);
+          }, 500);
+        } catch (error) {
+          console.error("保存エラー:", error);
+
+          saveMessage.textContent = "保存に失敗しました。";
+
+          saveMessage.style.display = "block";
+        } finally {
+          saveButton.disabled = false;
+
+          deletePrintButton.disabled = false;
+
+          saveButton.textContent = "保存";
+        }
+      });
+
+      // =====================================================
+      // 科目フィルター
+      // =====================================================
+
+      filterButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          currentSubject = button.dataset.subject;
+
+          filterButtons.forEach((item) => {
+            item.classList.remove("active");
+          });
+
+          button.classList.add("active");
+
+          renderPrints();
+        });
+      });
+
+      // =====================================================
+      // 更新
+      // =====================================================
+
+      reloadButton.addEventListener("click", async () => {
+        await loadPrints();
+      });
+
+      function updateQrIdInUrl(qrId) {
+        const url = new URL(window.location.href);
+
+        if (qrId) {
+          url.searchParams.set("qrId", qrId);
+        } else {
+          url.searchParams.delete("qrId");
+        }
+
+        window.history.replaceState(null, "", url.toString());
+      }
+
+      // =====================================================
+      // HTMLエスケープ
+      // =====================================================
+
+      function escapeHtml(value) {
+        const div = document.createElement("div");
+
+        div.textContent = String(value);
+
+        return div.innerHTML;
+      }
+    </script>
+  </body>
+</html>
