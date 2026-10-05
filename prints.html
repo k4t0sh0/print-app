@@ -57,6 +57,72 @@
         transform: scale(0.99);
       }
 
+      .print-card-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .print-card-heading {
+        min-width: 0;
+      }
+
+      .print-card-heading .print-subject {
+        margin-bottom: 8px;
+      }
+
+      .print-card-heading h3 {
+        overflow-wrap: anywhere;
+      }
+
+      .study-card-summary {
+        flex: 0 0 auto;
+        display: grid;
+        gap: 6px;
+        min-width: 112px;
+        padding: 9px 11px;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.86);
+        color: #333;
+      }
+
+      .study-card-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .study-card-label {
+        color: #777;
+        font-size: 11px;
+        line-height: 1.3;
+      }
+
+      .study-card-value {
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.3;
+        white-space: nowrap;
+      }
+
+      @media (max-width: 420px) {
+        .print-card-header {
+          gap: 8px;
+        }
+
+        .study-card-summary {
+          min-width: 98px;
+          padding: 8px;
+        }
+
+        .study-card-value {
+          font-size: 12px;
+        }
+      }
+
       .print-subject {
         display: inline-block;
         padding: 4px 9px;
@@ -280,6 +346,78 @@
       .share-button {
         margin-top: 8px;
       }
+
+      /* 勉強記録 */
+      .study-section {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+      }
+      .study-summary {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin: 12px 0;
+      }
+      .study-stat {
+        padding: 12px 8px;
+        border-radius: 12px;
+        background: #f7f7f7;
+        text-align: center;
+      }
+      .study-stat-value {
+        display: block;
+        font-size: 18px;
+        font-weight: bold;
+      }
+      .study-stat-label {
+        display: block;
+        margin-top: 3px;
+        font-size: 12px;
+        color: #777;
+      }
+      .study-record-button {
+        width: 100%;
+        margin-top: 8px;
+      }
+      .study-record-list {
+        margin-top: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .study-record-item {
+        padding: 10px 12px;
+        border: 1px solid #eee;
+        border-radius: 10px;
+        background: #fafafa;
+      }
+      .study-dialog-backdrop {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.35);
+        z-index: 1000;
+        box-sizing: border-box;
+      }
+      .study-dialog {
+        width: min(100%, 420px);
+        padding: 20px;
+        border-radius: 16px;
+        background: #fff;
+        box-sizing: border-box;
+      }
+      .study-dialog-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 16px;
+      }
+      .study-dialog-actions button {
+        flex: 1;
+      }
     </style>
   </head>
 
@@ -347,6 +485,35 @@
           </div>
 
           <div id="viewContent"></div>
+
+          <section id="studySection" class="study-section">
+            <h2>📚 勉強記録</h2>
+            <div class="study-summary">
+              <div class="study-stat">
+                <span id="studyLastDate" class="study-stat-value">--</span
+                ><span class="study-stat-label">最終復習</span>
+              </div>
+              <div class="study-stat">
+                <span id="studyCount" class="study-stat-value">0回</span
+                ><span class="study-stat-label">勉強回数</span>
+              </div>
+              <div class="study-stat">
+                <span id="studyTotalMinutes" class="study-stat-value">0分</span
+                ><span class="study-stat-label">累計勉強時間</span>
+              </div>
+            </div>
+            <p id="studyElapsed" class="print-info">
+              まだ勉強記録がありません。
+            </p>
+            <button
+              type="button"
+              id="addStudyRecordButton"
+              class="save-button study-record-button"
+            >
+              ＋ 勉強を記録
+            </button>
+            <div id="studyRecordList" class="study-record-list"></div>
+          </section>
 
           <button id="editButton" class="save-button save-detail-button">
             編集
@@ -469,6 +636,38 @@
       </div>
     </main>
 
+    <div id="studyDialogBackdrop" class="study-dialog-backdrop">
+      <div class="study-dialog">
+        <h2>📚 勉強を記録</h2>
+        <label for="studyMinutesInput">勉強時間（分）</label>
+        <input
+          type="number"
+          id="studyMinutesInput"
+          min="1"
+          step="1"
+          placeholder="例：30"
+        />
+        <label for="studyMemoInput">メモ</label>
+        <textarea
+          id="studyMemoInput"
+          rows="4"
+          placeholder="例：二次関数の問題を復習"
+        ></textarea>
+        <div class="study-dialog-actions">
+          <button
+            type="button"
+            id="cancelStudyRecordButton"
+            class="secondary-button"
+          >
+            キャンセル
+          </button>
+          <button type="button" id="saveStudyRecordButton" class="save-button">
+            保存
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- =====================================================
      Firebase
   ====================================================== -->
@@ -480,6 +679,7 @@
         getFirestore,
         collection,
         getDocs,
+        addDoc,
         doc,
         updateDoc,
         deleteDoc,
@@ -570,6 +770,26 @@
 
       const videoCount = document.getElementById("videoCount");
 
+      const studyLastDate = document.getElementById("studyLastDate");
+      const studyCount = document.getElementById("studyCount");
+      const studyTotalMinutes = document.getElementById("studyTotalMinutes");
+      const studyElapsed = document.getElementById("studyElapsed");
+      const studyRecordList = document.getElementById("studyRecordList");
+      const addStudyRecordButton = document.getElementById(
+        "addStudyRecordButton",
+      );
+      const studyDialogBackdrop = document.getElementById(
+        "studyDialogBackdrop",
+      );
+      const studyMinutesInput = document.getElementById("studyMinutesInput");
+      const studyMemoInput = document.getElementById("studyMemoInput");
+      const cancelStudyRecordButton = document.getElementById(
+        "cancelStudyRecordButton",
+      );
+      const saveStudyRecordButton = document.getElementById(
+        "saveStudyRecordButton",
+      );
+
       const filterButtons = document.querySelectorAll(".filter-button");
 
       // =====================================================
@@ -579,6 +799,8 @@
       let currentSubject = "すべて";
 
       let allPrints = [];
+
+      let studySummaryRequestId = 0;
 
       let editingPrintId = null;
 
@@ -629,6 +851,7 @@
           console.log("取得したプリント:", allPrints);
 
           renderPrints();
+          loadPrintStudySummaries(allPrints);
 
           openSharedPrintFromUrl();
         } catch (error) {
@@ -665,6 +888,19 @@
         printList.innerHTML = filteredPrints
           .map((print) => {
             const videos = normalizeVideos(print);
+            const studySummary = print.studySummary;
+            const studyTotal = studySummary
+              ? studySummary.error
+                ? "取得失敗"
+                : formatStudyMinutes(studySummary.totalMinutes)
+              : "読み込み中";
+            const lastReview = studySummary
+              ? studySummary.error
+                ? "—"
+                : studySummary.lastStudiedAt
+                  ? formatStudyDate(studySummary.lastStudiedAt)
+                  : "記録なし"
+              : "読み込み中";
 
             const videoText =
               videos.length > 0 ? `動画 ${videos.length}本` : "動画なし";
@@ -677,17 +913,28 @@
                 data-subject="${escapeHtml(print.subject || "")}" 
               >
 
-                <span
-                  class="print-subject"
-                  data-subject="${escapeHtml(print.subject || "")}" 
-                >
-                  ${escapeHtml(print.subject || "未設定")}
-                </span>
+                <div class="print-card-header">
+                  <div class="print-card-heading">
+                    <span
+                      class="print-subject"
+                      data-subject="${escapeHtml(print.subject || "")}" 
+                    >
+                      ${escapeHtml(print.subject || "未設定")}
+                    </span>
+                    <h3>${escapeHtml(print.title || "タイトル未設定")}</h3>
+                  </div>
 
-
-                <h3>
-                  ${escapeHtml(print.title || "タイトル未設定")}
-                </h3>
+                  <aside class="study-card-summary" aria-label="勉強記録の概要">
+                    <div class="study-card-stat">
+                      <span class="study-card-label">累計勉強時間</span>
+                      <strong class="study-card-value">${escapeHtml(studyTotal)}</strong>
+                    </div>
+                    <div class="study-card-stat">
+                      <span class="study-card-label">最終復習日</span>
+                      <strong class="study-card-value">${escapeHtml(lastReview)}</strong>
+                    </div>
+                  </aside>
+                </div>
 
 
                 <p class="print-info">
@@ -744,6 +991,48 @@
         });
       }
 
+      async function fetchStudySummary(printId) {
+        const snapshot = await getDocs(
+          collection(db, "prints", printId, "studyRecords"),
+        );
+        const records = [];
+        snapshot.forEach((item) => records.push(item.data()));
+
+        return {
+          totalMinutes: records.reduce(
+            (total, record) => total + (Number(record.minutes) || 0),
+            0,
+          ),
+          lastStudiedAt: records.reduce(
+            (latest, record) => Math.max(latest, Number(record.studiedAt) || 0),
+            0,
+          ),
+        };
+      }
+
+      async function loadPrintStudySummaries(prints) {
+        const requestId = ++studySummaryRequestId;
+        const summaries = await Promise.all(
+          prints.map(async (print) => {
+            try {
+              return await fetchStudySummary(print.id);
+            } catch (error) {
+              console.error(`勉強記録取得エラー (${print.id}):`, error);
+              return { error: true };
+            }
+          }),
+        );
+
+        if (requestId !== studySummaryRequestId || allPrints !== prints) {
+          return;
+        }
+
+        prints.forEach((print, index) => {
+          print.studySummary = summaries[index];
+        });
+        renderPrints();
+      }
+
       function openSharedPrintFromUrl() {
         const qrId = new URLSearchParams(window.location.search).get("qrId");
 
@@ -771,7 +1060,7 @@
       // 詳細画面
       // =====================================================
 
-      function openDetailScreen(printId) {
+      async function openDetailScreen(printId) {
         const print = allPrints.find((item) => item.id === printId);
 
         if (!print) {
@@ -789,6 +1078,7 @@
         populateEditor(print);
 
         renderPrintDetails(print);
+        await loadStudyRecords(printId);
 
         saveMessage.style.display = "none";
 
@@ -1044,6 +1334,163 @@
       }
 
       // =====================================================
+      // 勉強記録
+      // =====================================================
+
+      function formatStudyDate(timestamp) {
+        const date = new Date(Number(timestamp));
+        if (Number.isNaN(date.getTime())) return "--";
+        return date.toLocaleDateString("ja-JP", {
+          month: "numeric",
+          day: "numeric",
+        });
+      }
+
+      function formatStudyDateTime(timestamp) {
+        const date = new Date(Number(timestamp));
+        if (Number.isNaN(date.getTime())) return "";
+        return date.toLocaleString("ja-JP", {
+          year: "numeric",
+          month: "numeric",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      }
+
+      function formatStudyMinutes(minutes) {
+        const value = Number(minutes) || 0;
+        if (value < 60) return `${value}分`;
+        const h = Math.floor(value / 60);
+        const m = value % 60;
+        return m ? `${h}時間${m}分` : `${h}時間`;
+      }
+
+      async function loadStudyRecords(printId) {
+        studyLastDate.textContent = "--";
+        studyCount.textContent = "0回";
+        studyTotalMinutes.textContent = "0分";
+        studyElapsed.textContent = "読み込んでいます...";
+        studyRecordList.innerHTML = "";
+
+        try {
+          const snapshot = await getDocs(
+            collection(db, "prints", printId, "studyRecords"),
+          );
+          const records = [];
+          snapshot.forEach((item) =>
+            records.push({ id: item.id, ...item.data() }),
+          );
+          records.sort(
+            (a, b) => Number(b.studiedAt || 0) - Number(a.studiedAt || 0),
+          );
+
+          const total = records.reduce(
+            (sum, r) => sum + (Number(r.minutes) || 0),
+            0,
+          );
+          studyCount.textContent = `${records.length}回`;
+          studyTotalMinutes.textContent = formatStudyMinutes(total);
+
+          if (!records.length) {
+            studyElapsed.textContent = "まだ勉強記録がありません。";
+            studyRecordList.innerHTML =
+              '<p class="empty-message">勉強記録はまだありません。</p>';
+            return;
+          }
+
+          const last = Number(records[0].studiedAt || 0);
+          studyLastDate.textContent = formatStudyDate(last);
+          const lastDay = new Date(last);
+          const today = new Date();
+          const a = new Date(
+            lastDay.getFullYear(),
+            lastDay.getMonth(),
+            lastDay.getDate(),
+          );
+          const b = new Date(
+            today.getFullYear(),
+            today.getMonth(),
+            today.getDate(),
+          );
+          const days = Math.max(0, Math.floor((b - a) / 86400000));
+          studyElapsed.textContent =
+            days === 0
+              ? "今日、復習しています。"
+              : `最後の復習から${days}日経ちました。`;
+
+          studyRecordList.innerHTML = records
+            .map(
+              (r) => `
+            <div class="study-record-item">
+              <strong>${escapeHtml(formatStudyDateTime(r.studiedAt))}</strong>
+              <div class="print-info">勉強時間：${escapeHtml(formatStudyMinutes(r.minutes))}</div>
+              ${r.memo ? `<div>${escapeHtml(r.memo)}</div>` : ""}
+            </div>
+          `,
+            )
+            .join("");
+        } catch (error) {
+          console.error("勉強記録取得エラー:", error);
+          studyElapsed.textContent = "勉強記録を取得できませんでした。";
+        }
+      }
+
+      addStudyRecordButton.addEventListener("click", () => {
+        studyMinutesInput.value = "";
+        studyMemoInput.value = "";
+        studyDialogBackdrop.style.display = "flex";
+        studyMinutesInput.focus();
+      });
+
+      function closeStudyDialog() {
+        studyDialogBackdrop.style.display = "none";
+      }
+      cancelStudyRecordButton.addEventListener("click", closeStudyDialog);
+      studyDialogBackdrop.addEventListener("click", (event) => {
+        if (event.target === studyDialogBackdrop) closeStudyDialog();
+      });
+
+      saveStudyRecordButton.addEventListener("click", async () => {
+        if (!editingPrintId) return;
+        const minutes = Number(studyMinutesInput.value);
+        if (!Number.isInteger(minutes) || minutes <= 0) {
+          alert("勉強時間を1分以上の整数で入力してください。");
+          return;
+        }
+        saveStudyRecordButton.disabled = true;
+        try {
+          const now = Date.now();
+          await addDoc(
+            collection(db, "prints", editingPrintId, "studyRecords"),
+            {
+              minutes,
+              memo: studyMemoInput.value.trim(),
+              studiedAt: now,
+              createdAt: now,
+            },
+          );
+          closeStudyDialog();
+          await loadStudyRecords(editingPrintId);
+          const print = allPrints.find((item) => item.id === editingPrintId);
+          if (print) {
+            try {
+              print.studySummary = await fetchStudySummary(editingPrintId);
+            } catch (summaryError) {
+              console.error("一覧用勉強サマリー取得エラー:", summaryError);
+              print.studySummary = { error: true };
+            }
+            renderPrints();
+          }
+        } catch (error) {
+          console.error("勉強記録保存エラー:", error);
+          alert("勉強記録の保存に失敗しました。\n\n" + error.message);
+        } finally {
+          saveStudyRecordButton.disabled = false;
+        }
+      });
+
+      // =====================================================
       // 詳細画面を閉じる
       // =====================================================
 
@@ -1053,6 +1500,8 @@
         updateQrIdInUrl(null);
 
         detailScreen.style.display = "none";
+        closeStudyDialog();
+        studyRecordList.innerHTML = "";
 
         listScreen.style.display = "block";
 
